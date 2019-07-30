@@ -7,5 +7,9 @@ services:
       - FLASK_ENV=development
     expose:
       - "8080"
+    links:
+      - db
     ports:
       - "8080:8080"
+  db:
+    image: mongo:4.0.10

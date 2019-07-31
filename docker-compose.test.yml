@@ -3,3 +3,7 @@ services:
   sut:
     build: .
     entrypoint: ["pytest"]
+    links:
+      - db
+  db:
+    image: mongo:4.0.10

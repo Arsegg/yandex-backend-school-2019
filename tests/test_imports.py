@@ -14,12 +14,9 @@ def test_patch_citizens(patch_citizens, unwrap):
     assert isinstance(citizen, dict)
 
 
-def test_get_citizens(get_citizens, unwrap):
+def test_get_citizens_fail(get_citizens, unwrap):
     response = get_citizens(import_id=0)
-    assert response.status_code == 200
-
-    citizens = unwrap(response)
-    assert isinstance(citizens, list)
+    assert response.status_code == 400
 
 
 def test_get_citizens_birthdays(get_citizens_birthdays, unwrap):

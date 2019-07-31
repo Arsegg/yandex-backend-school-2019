@@ -1,9 +1,10 @@
+from json.decoder import JSONDecodeError
+
 from bson.errors import InvalidId
 from bson.objectid import ObjectId
 from flask import Blueprint
 from flask import abort
 from flask import request
-from json.decoder import JSONDecodeError
 
 from models import Import
 
@@ -26,9 +27,9 @@ def post():
         data = request.get_data()
         citizens = Import.from_json(data)
         import_id = citizens.save().id
+        return dict(data=dict(import_id=to_int(import_id))), 201
     except JSONDecodeError:
         abort(400)
-    return dict(data=dict(import_id=to_int(import_id))), 201
 
 
 @imports.route("/<int:import_id>/citizens/<int:citizen_id>", methods=("PATCH",))

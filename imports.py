@@ -1,26 +1,48 @@
-from flask import Blueprint
+from flask import (Blueprint,
+                   request, )
 
-imports = Blueprint("imports", __name__)
+from ext import (db,
+                 )
+from models import (Citizen,
+                    Import,
+                    citizen_schema,
+                    citizens_schema,
+                    import_schema, )
+
+imports = Blueprint("imports", __name__, url_prefix="/imports")
 
 
 @imports.route("", methods=("POST",))
 def post():
-    """TODO"""
-    import_id = 0
+    """TODO: add verifiers"""
+    import_ = import_schema.load(request.get_json())
+    db.session.add(import_)
+    db.session.commit()
+
+    import_id = import_.import_id
+
     return dict(data=dict(import_id=import_id)), 201
 
 
 @imports.route("/<int:import_id>/citizens/<int:citizen_id>", methods=("PATCH",))
 def patch_citizens(import_id, citizen_id):
-    """TODO"""
-    citizen = {}
+    """TODO: ensure relationship"""
+    instance = Citizen.query.filter_by(import_id=import_id, citizen_id=citizen_id).one()
+    citizen = citizen_schema.load(request.get_json(),
+                                  instance=instance,
+                                  partial=True)
+    db.session.add(citizen)
+    db.session.commit()
+
+    citizen = citizen_schema.dump(citizen)
+
     return dict(data=citizen), 200
 
 
 @imports.route("/<int:import_id>/citizens", methods=("GET",))
 def get_citizens(import_id):
-    """TODO"""
-    citizens = []
+    import_ = Import.query.get(import_id)
+    citizens = citizens_schema.dump(import_.citizens)
     return dict(data=citizens), 200
 
 

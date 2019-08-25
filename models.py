@@ -1,7 +1,8 @@
 from datetime import datetime
 
 from dateutil.relativedelta import relativedelta
-from marshmallow import post_load
+from marshmallow import (pre_load,
+                         post_load, )
 from numpy import percentile
 
 from ext import (db,
@@ -31,8 +32,8 @@ class Citizen(db.Model):
         return relativedelta(datetime.now(), self.birth_date).years
 
     def ensure_relationship(self):
-        self.relatives = [getattr(self, "import").get_citizen(relative.citizen_id)
-                          for relative in self.relatives]
+        # self.relatives = [getattr(self, "import").get_citizen(relative.citizen_id)
+        #                   for relative in self.relatives]
         for relative in self.relatives:
             if self not in relative.relatives:
                 relative.relatives.append(self)
@@ -92,14 +93,23 @@ class Import(db.Model):
 
 class CitizenSchema(ma.ModelSchema):
     relatives = ma.Pluck("self", "citizen_id", many=True)
+    _relatives = None
 
-    # @post_load(pass_many=True)
-    # def post_load(self, data, many, **kwargs):
-    #     if not many:
-    #         data["relatives"] = [self.context["import"].get_citizen(relative.citizen_id) for relative in
-    #                              data["relatives"]]
-    #
-    #     return data
+    @pre_load(pass_many=True)
+    def pre_load(self, data, many, **kwargs):
+        if not many:
+            self._relatives = data.pop("relatives")
+        return data
+
+    @post_load(pass_many=True)
+    def post_load(self, data, many, **kwargs):
+        if not many:
+            data["relatives"] = [self.context["import"].get_citizen(relative_id) for relative_id in
+                                 self._relatives]
+
+            self._relatives = None
+
+        return data
 
     class Meta:
         dateformat = "%d.%m.%Y"
@@ -111,16 +121,26 @@ class CitizenSchema(ma.ModelSchema):
 
 class ImportSchema(ma.ModelSchema):
     citizens = ma.Nested(CitizenSchema, many=True)
+    _relatives = None
+
+    @pre_load
+    def pre_load(self, data, **kwargs):
+        self._relatives = {citizen["citizen_id"]: citizen.pop("relatives") for citizen in data["citizens"]}
+
+        return data
 
     @post_load
     def post_load(self, data, **kwargs):
-        for citizen in data.citizens:
-            self.session.add(citizen)
+        # for citizen in data.citizens:
+        #     self.session.add(citizen)
 
         citizens = {citizen.citizen_id: citizen for citizen in data.citizens}
         for citizen in data.citizens:
-            citizen.relatives = [citizens[relative.citizen_id] for relative in citizen.relatives]
-            self.session.add(citizen)
+            relatives = self._relatives[citizen.citizen_id]
+            citizen.relatives = [citizens[relative_id] for relative_id in relatives]
+            # self.session.add(citizen)
+
+        self._relatives = None
 
         return data
 

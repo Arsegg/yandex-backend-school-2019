@@ -1,6 +1,6 @@
 FROM python:3.7.4-alpine
 
-RUN apk update && apk add postgresql-dev gcc python3-dev musl-dev
+RUN apk update && apk add postgresql-dev gcc python3-dev musl-dev py3-numpy
 
 ENV FLASK_APP=app.py
 WORKDIR /app

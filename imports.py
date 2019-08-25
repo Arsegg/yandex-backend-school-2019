@@ -1,10 +1,11 @@
-from flask import (Blueprint,
+from flask import (abort,
+                   Blueprint,
                    request, )
+from marshmallow import ValidationError
 
 from ext import (db,
                  )
-from models import (Citizen,
-                    Import,
+from models import (Import,
                     citizen_schema,
                     citizens_schema,
                     import_schema, )
@@ -15,46 +16,74 @@ imports = Blueprint("imports", __name__, url_prefix="/imports")
 @imports.route("", methods=("POST",))
 def post():
     """TODO: add verifiers"""
-    import_ = import_schema.load(request.get_json())
-    db.session.add(import_)
-    db.session.commit()
+    try:
+        import_ = import_schema.load(request.get_json())
+        db.session.add(import_)
+        db.session.commit()
 
-    import_id = import_.import_id
+        import_id = import_.import_id
 
-    return dict(data=dict(import_id=import_id)), 201
+        return dict(data=dict(import_id=import_id)), 201
+    except ValidationError as err:
+        db.session.rollback()
+        abort(400, description=err)
 
 
 @imports.route("/<int:import_id>/citizens/<int:citizen_id>", methods=("PATCH",))
 def patch_citizens(import_id, citizen_id):
-    """TODO: ensure relationship"""
-    instance = Citizen.query.filter_by(import_id=import_id, citizen_id=citizen_id).one()
-    citizen = citizen_schema.load(request.get_json(),
-                                  instance=instance,
-                                  partial=True)
-    db.session.add(citizen)
-    db.session.commit()
+    try:
+        import_ = Import.get(import_id)
 
-    citizen = citizen_schema.dump(citizen)
+        citizen = import_.get_citizen(citizen_id)
+        citizen.remove_relationship()
+        citizen_schema.context["import"] = import_
+        citizen = citizen_schema.load(request.get_json(),
+                                      instance=citizen,
+                                      partial=True)
+        citizen.ensure_relationship()
 
-    return dict(data=citizen), 200
+        db.session.add(citizen)
+        db.session.commit()
+
+        citizen = citizen_schema.dump(citizen)
+
+        return dict(data=citizen), 200
+    except ValidationError as err:
+        db.session.rollback()
+        abort(400, description=err)
 
 
 @imports.route("/<int:import_id>/citizens", methods=("GET",))
 def get_citizens(import_id):
-    import_ = Import.query.get(import_id)
-    citizens = citizens_schema.dump(import_.citizens)
-    return dict(data=citizens), 200
+    try:
+        import_ = Import.get(import_id)
+        citizens = citizens_schema.dump(import_.citizens)
+
+        return dict(data=citizens), 200
+    except ValidationError as err:
+        db.session.rollback()
+        abort(400, description=err)
 
 
 @imports.route("/<int:import_id>/citizens/birthdays", methods=("GET",))
 def get_citizens_birthdays(import_id):
-    """"TODO"""
-    birthdays = {}
-    return dict(data=birthdays), 200
+    try:
+        import_ = Import.get(import_id)
+        birthdays = import_.get_birthdays()
+
+        return dict(data=birthdays), 200
+    except ValidationError as err:
+        db.session.rollback()
+        abort(400, description=err)
 
 
 @imports.route("/<int:import_id>/towns/stat/percentile/age", methods=("GET",))
 def get_towns_stat_percentile_age(import_id):
-    """"TODO"""
-    stats = []
-    return dict(data=stats), 200
+    try:
+        import_ = Import.get(import_id)
+        stats = import_.get_stats()
+
+        return dict(data=stats), 200
+    except ValidationError as err:
+        db.session.rollback()
+        abort(400, description=err)

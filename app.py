@@ -1,14 +1,24 @@
 from flask import Flask
 
+from ext import (db,
+                 ma, )
 from imports import imports
 
 
 def create_app():
-    app_ = Flask(__name__)
-    app_.register_blueprint(imports, url_prefix="/imports")
-    return app_
+    app = Flask(__name__)
+    app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://postgres:postgres@db/postgres"
+    app.config["SQLALCHEMY_ECHO"] = True
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.app_context().push()
 
+    db.init_app(app)
+    db.drop_all()
+    db.create_all()
+    db.session.commit()
 
-if __name__ == "__main__":
-    app = create_app()
-    app.run()
+    ma.init_app(app)
+
+    app.register_blueprint(imports)
+
+    return app

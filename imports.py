@@ -1,10 +1,8 @@
 from flask import (abort,
                    Blueprint,
                    request, )
-from marshmallow import ValidationError
 
-from ext import (db,
-                 )
+from ext import db
 from models import (Import,
                     citizen_schema,
                     citizens_schema,
@@ -15,7 +13,6 @@ imports = Blueprint("imports", __name__, url_prefix="/imports")
 
 @imports.route("", methods=("POST",))
 def post():
-    """TODO: add verifiers"""
     try:
         import_ = import_schema.load(request.get_json())
         db.session.add(import_)
@@ -24,7 +21,7 @@ def post():
         import_id = import_.import_id
 
         return dict(data=dict(import_id=import_id)), 201
-    except ValidationError as err:
+    except Exception as err:
         db.session.rollback()
         abort(400, description=err)
 
@@ -48,7 +45,7 @@ def patch_citizens(import_id, citizen_id):
         citizen = citizen_schema.dump(citizen)
 
         return dict(data=citizen), 200
-    except ValidationError as err:
+    except Exception as err:
         db.session.rollback()
         abort(400, description=err)
 
@@ -60,7 +57,7 @@ def get_citizens(import_id):
         citizens = citizens_schema.dump(import_.citizens)
 
         return dict(data=citizens), 200
-    except ValidationError as err:
+    except Exception as err:
         db.session.rollback()
         abort(400, description=err)
 
@@ -72,7 +69,7 @@ def get_citizens_birthdays(import_id):
         birthdays = import_.get_birthdays()
 
         return dict(data=birthdays), 200
-    except ValidationError as err:
+    except Exception as err:
         db.session.rollback()
         abort(400, description=err)
 
@@ -84,6 +81,6 @@ def get_towns_stat_percentile_age(import_id):
         stats = import_.get_stats()
 
         return dict(data=stats), 200
-    except ValidationError as err:
+    except Exception as err:
         db.session.rollback()
         abort(400, description=err)

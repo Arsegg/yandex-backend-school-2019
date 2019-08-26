@@ -2,7 +2,8 @@ from datetime import datetime
 
 from dateutil.relativedelta import relativedelta
 from marshmallow import (pre_load,
-                         post_load, )
+                         post_load,
+                         validate, )
 from numpy import percentile
 
 from ext import (db,
@@ -92,6 +93,14 @@ class Import(db.Model):
 
 
 class CitizenSchema(ma.ModelSchema):
+    citizen_id = ma.Integer(required=True, validate=validate.Range(0))
+    town = ma.String(required=True, validate=validate.Regexp(r"\w"))
+    street = ma.String(required=True, validate=validate.Regexp(r"\w"))
+    building = ma.String(required=True, validate=validate.Regexp(r"\w"))
+    apartment = ma.Integer(required=True, validate=validate.Range(0))
+    name = ma.String(required=True, validate=validate.Regexp(r"^\w+ \w+( \w+)?$"))
+    gender = ma.String(required=True, validate=validate.OneOf(("male", "female",)))
+
     relatives = ma.Pluck("self", "citizen_id", many=True)
     _relatives = None
 

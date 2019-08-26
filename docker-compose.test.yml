@@ -2,4 +2,8 @@ version: "3.5"
 services:
   sut:
     build: .
-    entrypoint: ["pytest"]
+    entrypoint: ["pytest", "-v"]
+    links:
+      - db
+  db:
+    image: postgres:11.5-alpine
